@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_navigation_3/cubit/cubit/auth_cubit.dart';
 import 'package:flutter_navigation_3/pages/home.dart';
 import 'package:flutter_navigation_3/state/cubit/welcome_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,8 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   bool isVisible = true;
   bool isLoggedIn = false;
@@ -65,13 +68,14 @@ class _LoginState extends State<Login> {
                               border: OutlineInputBorder()),
                           validator: (value) {
                             if (value!.isEmpty) {
-                              return 'Please enter your username';
+                              return 'Silahkan isi username anda';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 20),
                         TextFormField(
+                          controller: _passwordController,
                           obscureText: isVisible,
                           decoration: InputDecoration(
                               labelText: 'Password',
@@ -100,22 +104,39 @@ class _LoginState extends State<Login> {
                 const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
-                  child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _saveData();
+                  child: ElevatedButton(onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      _saveData();
 
-                          context
-                              .read<WelcomeCubit>()
-                              .setData(_usernameController.text);
+                      // context
+                      //     .read<WelcomeCubit>()
+                      //     .setData(_usernameController.text);
 
-                          Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const Home()));
-                        }
-                      },
-                      child: const Text('Login')),
+                      context.read<AuthCubit>().loginUser(
+                          username: _usernameController.text,
+                          password: _passwordController.text);
+                    }
+                  }, child: BlocConsumer<AuthCubit, AuthState>(
+                    listener: (context, state) {
+                      if (state is AuthSuccess) {
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const Home()));
+                      } else if (state is AuthFailed) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(state.message),
+                            duration: const Duration(seconds: 2)));
+                      }
+                    },
+                    builder: (context, state) {
+                      if (state is AuthLoading) {
+                        return const CircularProgressIndicator();
+                      } else {
+                        return const Text('Login');
+                      }
+                    },
+                  )),
                 )
               ],
             ),
